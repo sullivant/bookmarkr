@@ -2,6 +2,7 @@
 
 pub mod github;
 pub mod google;
+pub mod instagram;
 pub mod twitter;
 
 pub fn get_command_from_query_string(query_string: &str) -> &str {
