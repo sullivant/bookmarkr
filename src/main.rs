@@ -2,13 +2,20 @@
 
 #[macro_use]
 extern crate rocket;
+#[macro_use]
+extern crate rocket_contrib;
+#[macro_use]
+extern crate serde_derive;
 
 use rocket::http::RawStr;
 use rocket::request::Form;
 use rocket::response::Redirect;
+use rocket_contrib::json::{Json, JsonValue};
 use rocket_contrib::serve::StaticFiles;
 
 mod utils;
+
+type ID = usize;
 
 #[derive(FromForm)]
 struct UserInput<'f> {
@@ -16,15 +23,16 @@ struct UserInput<'f> {
     value: &'f RawStr,
 }
 
-#[get("/")]
-fn index() -> &'static str {
-    "Hello, world."
+#[derive(Serialize, Deserialize)]
+struct Message {
+    id: Option<ID>,
+    contents: String,
 }
 
-#[get("/links")]
-fn get_links() -> &'static str {
-    "this is a list of links."
-}
+//#[get("/")]
+//fn index() -> &'static str {
+//    "Hello, world."
+//}
 
 #[get("/search?<cmd>")]
 fn search(cmd: String) -> Redirect {
@@ -40,6 +48,22 @@ fn search(cmd: String) -> Redirect {
     Redirect::to(redirect_url)
 }
 
+#[get("/get/<id>")]
+fn get(id: ID) -> Json<Message> {
+    Json(Message {
+        id: Some(id),
+        contents: "Hello from json".to_string(),
+    })
+}
+
+#[catch(404)]
+fn not_found() -> JsonValue {
+    json!({
+        "status": "error",
+        "reason": "Resource was not found."
+    })
+}
+
 #[post("/submit", data = "<user_input>")]
 fn submit_task(user_input: Form<UserInput>) -> String {
     format!("Your value: {}", user_input.value)
@@ -47,11 +71,10 @@ fn submit_task(user_input: Form<UserInput>) -> String {
 
 fn main() {
     rocket::ignite()
-        .mount("/", routes![index, search, get_links, submit_task])
+        .mount("/", routes![search, submit_task, get])
         .mount(
             "/",
             StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/static")),
         )
-        //.mount("/links", routes![links])
         .launch();
 }
